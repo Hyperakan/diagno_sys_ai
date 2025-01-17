@@ -1,0 +1,38 @@
+services:
+  milvus:
+    image: milvusdb/milvus # Specifies the Milvus image to use
+    container_name: milvus # Sets the container name to milvus
+    ports:
+      - "19530:19530" # Maps port 19530 on the host to port 19530 in the container
+    volumes:
+      - milvus_data:/var/lib/milvus # Mounts the milvus_data volume to /var/lib/milvus in the container
+
+  diagno_sys:
+    build:
+      context: ./app # Specifies the build context as the ./app directory
+      dockerfile: Dockerfile # Uses the Dockerfile in the build context
+    environment:
+      - MILVUS_CLIENT=http://milvus:19530
+      - OLLAMA=http://ollama:11434
+    container_name: diagno_sys # Sets the container name to winy
+    ports:
+      - "8501:8501" # Maps port 8501 on the host to port 8501 in the container
+    depends_on:
+      - milvus # Ensures the milvus service is started before winy
+      - ollama # Ensures the ollama service is started before winy
+
+  ollama:
+    image: ollama/ollama # Specifies the Ollama image to use
+    container_name: ollama # Sets the container name to ollama
+    ports:
+      - "11434:11434" # Maps port 11434 on the host to port 11434 in the container
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia # Specifies the driver to use for GPU
+              count: 1 # Reserves 1 GPU
+              capabilities: [gpu] # Specifies that the device capability is GPU
+
+volumes:
+  milvus_data: # Defines the milvus_data volume
