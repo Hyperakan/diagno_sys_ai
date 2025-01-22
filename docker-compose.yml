@@ -1,38 +1,60 @@
+version: "3.8"
 services:
-  milvus:
-    image: milvusdb/milvus # Specifies the Milvus image to use
-    container_name: milvus # Sets the container name to milvus
+  qdrant:
+    image: qdrant/qdrant:v1.3.0
+    container_name: qdrant
     ports:
-      - "19530:19530" # Maps port 19530 on the host to port 19530 in the container
+      - "6333:6333"
     volumes:
-      - milvus_data:/var/lib/milvus # Mounts the milvus_data volume to /var/lib/milvus in the container
-
-  diagno_sys:
-    build:
-      context: ./app # Specifies the build context as the ./app directory
-      dockerfile: Dockerfile # Uses the Dockerfile in the build context
+      - qdrant_data:/qdrant/storage
     environment:
-      - MILVUS_CLIENT=http://milvus:19530
-      - OLLAMA=http://ollama:11434
-    container_name: diagno_sys # Sets the container name to winy
-    ports:
-      - "8501:8501" # Maps port 8501 on the host to port 8501 in the container
-    depends_on:
-      - milvus # Ensures the milvus service is started before winy
-      - ollama # Ensures the ollama service is started before winy
+      QDRANT__STORAGE__PATH: "/qdrant/storage"
 
-  ollama:
-    image: ollama/ollama # Specifies the Ollama image to use
-    container_name: ollama # Sets the container name to ollama
+  rag_server:
+    build:
+      context: .
+      dockerfile: Dockerfile.rag
+    depends_on:
+      - qdrant
+    environment:
+      - MODEL_NAME=BAAI/bge-m3
     ports:
-      - "11434:11434" # Maps port 11434 on the host to port 11434 in the container
+      - "8001:8001"
     deploy:
       resources:
         reservations:
           devices:
-            - driver: nvidia # Specifies the driver to use for GPU
-              count: 1 # Reserves 1 GPU
-              capabilities: [gpu] # Specifies that the device capability is GPU
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  diagno_sys:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    environment:
+      - QDRANT_URL=http://localhost:6333  # Qdrant ile bağlantı
+      - OLLAMA_URL=http://localhost:11434
+    container_name: diagno_sys
+    ports:
+      - "8501:8501"
+    depends_on:
+      - qdrant
+      - ollama
 
 volumes:
-  milvus_data: # Defines the milvus_data volume
+  qdrant_data:
+    driver: local
