@@ -9,8 +9,16 @@ def load_embedding_model():
     try:
         if _model is None:
             model_name = os.getenv("MODEL_NAME")  # Model adı burada sabitlenmiş
-            logging.info(f"Loading embedding model: {model_name}")
-            _model = SentenceTransformer(model_name)
+            if _model is None:
+                model_path = f"/app/embedding_models/{model_name}"  # Yerel model yolunu belirtiyoruz
+                if os.path.exists(model_path):
+                    _model = SentenceTransformer(model_path)
+                    logging.info("Model loaded from local storage.")
+                else:
+                    logging.info(f"Installing embedding model: {model_name}")
+                    _model = SentenceTransformer(model_name)
+                    _model.save(f"/app/embedding_models/{model_name}")
+                    
             logging.info("Embedding model loaded successfully.")
             if torch.cuda.is_available():
                 _model = _model.to('cuda')  # GPU'ya taşıyoruz

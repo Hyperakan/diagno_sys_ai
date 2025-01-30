@@ -12,7 +12,7 @@ async def answer(query: Query):
     """
     try:
         chunks = process_query(query=query)
-        response = generate_response(query.question)
+        response = generate_response(query.question, chunks)
         return {"question": query.question, "response": response}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

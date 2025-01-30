@@ -14,9 +14,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.rag
+    volumes:
+      - model_data:/app/embedding_models
     depends_on:
       - qdrant
     environment:
+      - QDRANT_URL=http://qdrant:6333 
       - MODEL_NAME=BAAI/bge-m3
     ports:
       - "8001:8001"
@@ -46,8 +49,7 @@ services:
       context: .
       dockerfile: Dockerfile.app
     environment:
-      - QDRANT_URL=http://localhost:6333  # Qdrant ile bağlantı
-      - OLLAMA_URL=http://localhost:11434
+      - OLLAMA_URL=http://ollama:11434
     container_name: diagno_sys
     ports:
       - "8501:8501"
@@ -56,5 +58,7 @@ services:
       - ollama
 
 volumes:
+  model_data:
+    driver: local
   qdrant_data:
     driver: local
