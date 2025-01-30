@@ -6,7 +6,7 @@ import logging
 # Logger yapılandırması
 logging.basicConfig(
     level=logging.INFO,  # INFO seviyesindeki logları göster
-    format="%(levelname)s:\\t %(message)s",  # Log formatını belirleyelim
+    format="%(levelname)s:\t  %(message)s",  # Log formatını belirleyelim
 )
 
 logger = logging.getLogger(__name__)

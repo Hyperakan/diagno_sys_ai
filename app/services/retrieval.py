@@ -6,7 +6,7 @@ async def process_query(query: Query, top_k: int = 5):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "http://localhost:8001/search",  # RAG container endpoint
+                "http://localhost:8001/rag/search",  # RAG container endpoint
                 json={"query": query.question, "top_k": top_k}
             )
         response.raise_for_status()
