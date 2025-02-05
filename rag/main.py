@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from routers import search
 from contextlib import asynccontextmanager
 from utils.model_utils import load_embedding_model, unload_embedding_model
-from utils.vector_db_utils import create_client, create_collection
+from utils.vector_db_utils import create_client, create_collection, close_client_conection
 import logging 
 import os
 
@@ -20,14 +20,14 @@ logger.info("This is an info message from rag container.")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    FastAPI uygulaması başlatılırken modeli yükler ve qdrant collection olusturur, uygulama sonlandığında ise boşaltır.
+    FastAPI uygulaması başlatılırken modeli yükler ve weaviate collection olusturur, uygulama sonlandığında ise boşaltır.
     """
     try:
         logging.info("Starting lifespan context - loading model.")
         load_embedding_model()  # Modeli yükle
-        logging.info("Creating Qdrant client and collection.")
+        logging.info("Creating Weaviate client and collection.")
         create_client()
-        create_collection(collection_name="med-documents")
+        create_collection(collection_name="med_documents")
         yield 
     except Exception as e:
         logging.error(f"Error during lifespan: {e}")
@@ -35,6 +35,7 @@ async def lifespan(app: FastAPI):
     finally:
         logging.info("Ending lifespan context - unloading model.")
         unload_embedding_model()  # Uygulama sonlanınca modeli boşalt
+        close_client_conection()
 
 app = FastAPI(title="RAG API", version="1.0.0", lifespan=lifespan)
 

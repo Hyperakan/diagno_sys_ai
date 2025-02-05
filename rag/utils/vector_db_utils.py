@@ -1,25 +1,25 @@
-from qdrant_client import QdrantClient
-from qdrant_client.models import VectorParams, Distance
-import os
-import logging
+import weaviate
+from weaviate.classes.config import Configure
+_weaviate_client = None
 
 def create_client():
-    global _qdrant_client
-    qdrant_url = os.getenv("QDRANT_URL")
-    _qdrant_client = QdrantClient(url=qdrant_url)
-    return _qdrant_client
+    global _weaviate_client
+    _weaviate_client = weaviate.connect_to_local(host="weaviate")
+    return _weaviate_client
         
 def get_client():
-    if _qdrant_client is None:
-        raise RuntimeError("Qdrant client is not loaded!")
-    return _qdrant_client
+    if _weaviate_client is None:
+        raise RuntimeError("Weaviate client is not loaded!")
+    return _weaviate_client
     
 def create_collection(collection_name: str):
     client = get_client()
-    try:
-        client.collection_exists(collection_name)
-    except Exception as e:
-        logging.info(f"Collection {collection_name} already exists.")
-        pass
-    client.create_collection(collection_name=collection_name, vectors_config=VectorParams(size=1024,
-                                                                                         distance=Distance.COSINE))
+    if not client.collections.exists(collection_name):
+        med_documents = client.collections.create(
+            name = collection_name,
+            vectorizer_config = Configure.Vectorizer.none(),
+        )
+    
+def close_client_conection():
+    client = get_client()
+    client.close()

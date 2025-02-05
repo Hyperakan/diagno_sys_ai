@@ -1,6 +1,6 @@
-qdrant-client
 sentence-transformers
 fastapi[standard]
 uvicorn
 pydantic
-unstructured
+unstructured[all-docs]
+weaviate-client
