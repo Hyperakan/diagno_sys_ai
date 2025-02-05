@@ -1,8 +1,6 @@
 from uuid import uuid4
 from models.models import QueryRequest
 from utils.model_utils import get_embedding_model
-from io import BytesIO
-from unstructured.partition.auto import partition   
 from weaviate.classes.data import DataObject
 from utils.vector_db_utils import get_client
 import os
@@ -18,7 +16,7 @@ def search_documents(query_obj: QueryRequest):
         query=query_obj.query,
         vector=query_vector,
         limit=query_obj.top_k,
-        alpha=0.5
+        alpha=query_obj.hybrid_alpha
     )
     
     return relevant_chunks
@@ -54,8 +52,3 @@ def chunk_documents(content, chunk_size=512, overlap=20):
     chunked_texts = [model.untokenize(chunk) for chunk in chunks]
     
     return chunked_texts
-
-
-def extract_content(filestream: BytesIO):
-    elements = partition(file=filestream)
-    return "\n\n".join([str(el) for el in elements])

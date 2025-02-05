@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers import query
+from app.routers import chat
 import logging 
 
 
@@ -18,7 +18,7 @@ logger.info("This is an info message from llm container.")
 app = FastAPI(title="LLM FastAPI", version="1.0.0")
 
 # Routers'ı dahil et
-app.include_router(query.router, prefix="/chat", tags=["Chat"])
+app.include_router(chat.router, prefix="", tags=["Chat"])
 
 @app.get("/")
 def root():

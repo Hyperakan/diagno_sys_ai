@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
         load_embedding_model()  # Modeli yükle
         logging.info("Creating Weaviate client and collection.")
         create_client()
-        create_collection(collection_name="med_documents")
+        create_collection(collection_name=os.getenv("COLLECTION_NAME"))
         yield 
     except Exception as e:
         logging.error(f"Error during lifespan: {e}")
@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="RAG API", version="1.0.0", lifespan=lifespan)
 
 # Router'ı dahil et
-app.include_router(search.router, prefix="/rag", tags=["Rag"])
+app.include_router(search.router, prefix="", tags=["Rag"])
 
 @app.get("/")
 def root():

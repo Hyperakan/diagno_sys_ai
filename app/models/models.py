@@ -1,10 +1,8 @@
 from pydantic import BaseModel
 
-class Query(BaseModel):
+class ChatRequest(BaseModel):
     question: str
+    model_name: str
+    temperature: str
+    search: bool
     
-class User(BaseModel):
-    username: str
-    email: str
-    full_name: str = None
-    disabled: bool = None
