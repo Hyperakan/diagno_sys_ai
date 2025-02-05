@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routers import chat
+from routers import chat
 import logging 
 
 
