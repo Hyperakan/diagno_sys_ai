@@ -1,39 +1,44 @@
 from uuid import uuid4
 from models.models import QueryRequest
 from utils.model_utils import get_embedding_model
-from fastapi import File
+from io import BytesIO
 from unstructured.partition.auto import partition   
-from qdrant_client import QdrantClient
-from qdrant_client.models import PointStruct
+from weaviate.classes.data import DataObject
+from utils.vector_db_utils import get_client
 import os
+import logging
 
-def search_documents(query: QueryRequest):
+def search_documents(query_obj: QueryRequest):
     embedding_model = get_embedding_model()
-    query_vector = embedding_model.encode(query.query).tolist()
-    client = QdrantClient(url=os.getenv("QDRANT_URL"))
-    hits = client.query_points(
-        collection_name="med-documents",
-        query=query_vector,
-        limit=query.top_k,
-    ).points
+    query_vector = embedding_model.encode(query_obj.query).tolist()
+    client = get_client()
+    documents = client.collections.get(query_obj.collection_name)
     
-    return hits
+    relevant_chunks = documents.query.hybrid(
+        query=query_obj.query,
+        vector=query_vector,
+        limit=query_obj.top_k,
+        alpha=0.5
+    )
+    
+    return relevant_chunks
+    
 
 def index_document(content: str, collection_name: str):
     model = get_embedding_model()
-    client = QdrantClient(url=os.getenv("QDRANT_URL"))
+    client = get_client()
 
     chunked_texts = chunk_documents(content)
     embeddings = [model.embed(text) for text in chunked_texts]
-
-    points = [
-    PointStruct(id=i, vector=embedding, payload={"text": text})
-    for i, (embedding, text) in enumerate(zip(embeddings, chunked_texts))
-    ]
-
-    client.upsert(collection_name=collection_name, points=points)
-
-    return f"Stored {len(points)} documents in {collection_name}"
+    collection = client.collection.get(collection_name)
+    data_obj = list()
+    for i, d in enumerate(chunked_texts):
+        data_obj.append(DataObject(
+            properties={"text": d},
+            vector=embeddings[i]))
+        
+    uuids = collection.data.insert(data_obj)
+    logging.info(f"Succesfully indexed {len(uuids)} chunks.")
 
 def chunk_documents(content, chunk_size=512, overlap=20):
     model = get_embedding_model()
@@ -51,6 +56,6 @@ def chunk_documents(content, chunk_size=512, overlap=20):
     return chunked_texts
 
 
-def extract_content(file: File):
-    elements = partition(filename=file.filename)
+def extract_content(filestream: BytesIO):
+    elements = partition(file=filestream)
     return "\n\n".join([str(el) for el in elements])
