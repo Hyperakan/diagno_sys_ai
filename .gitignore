@@ -48,3 +48,7 @@ Thumbs.db
 *.mov
 *.wmv
 
+#dummy_docs
+dummy_docs/
+#test
+test/
