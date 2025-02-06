@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from fastapi import File, UploadFile
 from models.models import QueryRequest
-from models.models import IndexDocumentRequest
 from services.vector_service import search_documents
-from services.vector_service import index_document
+from services.vector_service import embed_and_index_documents
+import os
 
 router = APIRouter(prefix="/rag")
 
@@ -19,13 +19,14 @@ async def search(request: QueryRequest):
         raise HTTPException(status_code=500, detail=str(e))
     
 @router.post("/index-document")
-async def index_document(index_document_request: IndexDocumentRequest):
+async def index_document(file: UploadFile = File(...)):
     try:
-        file = index_document_request.file
-        collection_name = index_document_request.collection_name
-        content = await file.read()
-        index_document(content=content, collection_name=collection_name)
+        byte_data = await file.read()
+        content = byte_data.decode("utf-8")
+        embed_and_index_documents(content=content, collection_name=os.getenv("COLLECTION_NAME"))
             
         return {"filename": file.filename, "message": "File indexed successfully!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        file.file.close()

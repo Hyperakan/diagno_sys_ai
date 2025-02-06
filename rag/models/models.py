@@ -11,3 +11,4 @@ class QueryRequest(BaseModel):
 class IndexDocumentRequest(BaseModel):
     file: UploadFile = File(...)
     collection_name: str = os.getenv("COLLECTION_NAME")
+    
