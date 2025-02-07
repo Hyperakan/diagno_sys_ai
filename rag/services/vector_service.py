@@ -7,9 +7,9 @@ from typing import List
 import os
 import logging
 
-def search_documents(query_obj: QueryRequest):
-    embedding_model = get_embedding_model()
-    query_vector = embedding_model.encode(query_obj.query).tolist()
+def search_documents(query_obj: QueryRequest):  
+    model = get_embedding_model()
+    query_vector = model.encode(query_obj.query).tolist()
     client = get_client()
     documents = client.collections.get(query_obj.collection_name)
     
