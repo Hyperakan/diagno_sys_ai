@@ -2,11 +2,9 @@ from fastapi import APIRouter, HTTPException
 from fastapi import File, UploadFile
 from models.models import QueryRequest
 from services.vector_service import search_documents
-from services.vector_service import extract_content
-from services.vector_service import index_document
-from io import BytesIO
+from services.vector_service import embed_and_index_documents
+import os
 import logging
-
 router = APIRouter(prefix="/rag")
 
 @router.post("/search")
@@ -15,7 +13,7 @@ async def search(request: QueryRequest):
     Weaviate ve SentenceTransformer ile sorgu işlemi.
     """
     try:
-        results = search_documents(request = request)
+        results = search_documents(query_obj=request)
         return {"query": request.query, "results": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -23,16 +21,12 @@ async def search(request: QueryRequest):
 @router.post("/index-document")
 async def index_document(file: UploadFile = File(...)):
     try:
-        contents = await file.read()
-
-        # Dosyayı BytesIO ile bir byte stream'e dönüştür
-        file_stream = BytesIO(contents)
-
-        # Dosyanın içeriğini unstructured ile çıkar
-        extracted_data = extract_content(file_stream)
-        logging.info(f"{extracted_data}")
-        index_document(content=extracted_data, collection_name="med_documents")
+        byte_data = await file.read()
+        content = byte_data.decode("utf-8")
+        embed_and_index_documents(content=content, collection_name=os.getenv("COLLECTION_NAME"))
             
         return {"filename": file.filename, "message": "File indexed successfully!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        file.file.close()

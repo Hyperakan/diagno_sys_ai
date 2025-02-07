@@ -2,5 +2,5 @@ sentence-transformers
 fastapi[standard]
 uvicorn
 pydantic
-unstructured[all-docs]
 weaviate-client
+langchain-text-splitters

@@ -1,9 +1,9 @@
 from langchain_ollama import OllamaLLM
 import os
 
-def generate_response(question: str, chunks) -> str:
-    ollama_url = os.getenv("OLAMA_URL")
-    llm = OllamaLLM(model='mistral',  base_url=ollama_url, temperature=0, )
+def generate_response_with_context(question: str, chunks, model_name: str, temperature: float) -> str:
+    ollama_url = os.getenv("OLLAMA_URL")
+    llm = OllamaLLM(model=model_name,  base_url=ollama_url, temperature=temperature)
     
     prompt = f"context: {chunks} question: {question} answer:"
     response = llm.invoke(prompt)

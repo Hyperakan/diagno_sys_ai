@@ -35,6 +35,7 @@ services:
     environment:
       - WEAVIATE_URL=http://weaviate:8080 
       - MODEL_NAME=BAAI/bge-m3
+      - COLLECTION_NAME=med_documents
     ports:
       - "8001:8001"
     container_name: rag_server
