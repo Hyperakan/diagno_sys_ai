@@ -3,6 +3,6 @@ from pydantic import BaseModel
 class ChatRequest(BaseModel):
     question: str
     model_name: str
-    temperature: str
+    temperature: float
     search: bool
     
