@@ -50,3 +50,7 @@ Thumbs.db
 
 #dummy_docs
 dummy_docs/
+#llm_data
+/data
+#extracted texts
+/general_utils/extracted_txts
