@@ -2,25 +2,25 @@ version: "3.8"
 services:
   weaviate:
     command:
-    - --host
-    - 0.0.0.0
-    - --port
-    - '8080'
-    - --scheme
-    - http
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --scheme
+      - http
     image: cr.weaviate.io/semitechnologies/weaviate:1.28.4
     ports:
-    - 8080:8080
-    - 50051:50051
+      - 8080:8080
+      - 50051:50051
     container_name: weaviate
     volumes:
-    - weaviate_data:/var/lib/weaviate
+      - weaviate_data:/var/lib/weaviate
     restart: on-failure:0
     environment:
       QUERY_DEFAULTS_LIMIT: 25
-      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
-      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
-      CLUSTER_HOSTNAME: 'node1'
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      CLUSTER_HOSTNAME: "node1"
     networks:
       - diagno_sys_network
 
@@ -33,7 +33,7 @@ services:
     depends_on:
       - weaviate
     environment:
-      - WEAVIATE_URL=http://weaviate:8080 
+      - WEAVIATE_URL=http://weaviate:8080
       - MODEL_NAME=BAAI/bge-m3
       - COLLECTION_NAME=med_documents
     ports:
@@ -63,6 +63,8 @@ services:
               capabilities: [gpu]
     networks:
       - diagno_sys_network
+    volumes:
+      - ./data/ollama:/root/.ollama
 
   diagno_sys:
     build:
@@ -83,6 +85,8 @@ volumes:
   model_data:
     driver: local
   weaviate_data:
+    driver: local
+  ollama:
     driver: local
 
 networks:
