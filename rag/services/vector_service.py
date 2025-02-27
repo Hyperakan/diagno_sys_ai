@@ -41,7 +41,6 @@ def embed_and_index_documents(content: str, collection_name: str):
             properties={
                     "context": text
             }
-            logging.info(type(properties))
             data_objects.append(DataObject(
                 properties=properties,
                 vector=embedding
