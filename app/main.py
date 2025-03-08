@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from routers import chat
 import logging 
 
@@ -16,6 +17,14 @@ logger.info("This is an info message from llm container.")
 
 
 app = FastAPI(title="LLM FastAPI", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_headers=["*"],
+    allow_methods=["*"],
+)
 
 # Routers'ı dahil et
 app.include_router(chat.router, prefix="", tags=["Chat"])
