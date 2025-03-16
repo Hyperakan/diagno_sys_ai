@@ -2,6 +2,7 @@ from uuid import uuid4
 from models.models import QueryRequest
 from utils.model_utils import get_embedding_model
 from weaviate.classes.data import DataObject
+from weaviate.classes.query import MetadataQuery
 from utils.vector_db_utils import get_client
 from typing import List
 import os
@@ -17,7 +18,8 @@ def search_documents(query_obj: QueryRequest):
         query=query_obj.query,
         vector=query_vector,
         limit=query_obj.top_k,
-        alpha=query_obj.hybrid_alpha
+        alpha=query_obj.hybrid_alpha,
+        return_metadata=MetadataQuery(score=True)
     )
     
     return relevant_chunks
