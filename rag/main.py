@@ -8,13 +8,12 @@ import os
 
 # Logger yapılandırması
 logging.basicConfig(
-    level=logging.INFO,  # INFO seviyesindeki logları göster
-    format="%(levelname)s:\t  %(message)s",  # Log formatını belirleyelim
+    level=logging.INFO,
+    format="%(levelname)s:\t  %(message)s", 
 )
 
 logger = logging.getLogger(__name__)
 
-# Artık logger'ı bu şekilde kullanabilirsiniz
 logger.info("This is an info message from rag container.")
 
 @asynccontextmanager
@@ -24,7 +23,7 @@ async def lifespan(app: FastAPI):
     """
     try:
         logging.info("Starting lifespan context - loading model.")
-        load_embedding_model()  # Modeli yükle
+        load_embedding_model()  
         logging.info("Creating Weaviate client and collection.")
         create_client()
         create_collection(collection_name=os.getenv("COLLECTION_NAME"))
@@ -34,12 +33,11 @@ async def lifespan(app: FastAPI):
         raise e
     finally:
         logging.info("Ending lifespan context - unloading model.")
-        unload_embedding_model()  # Uygulama sonlanınca modeli boşalt
+        unload_embedding_model() 
         close_client_conection()
 
 app = FastAPI(title="RAG API", version="1.0.0", lifespan=lifespan)
 
-# Router'ı dahil et
 app.include_router(search.router, prefix="", tags=["Rag"])
 
 @app.get("/")

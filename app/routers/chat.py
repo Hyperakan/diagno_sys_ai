@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from services.llm import async_llm_stream_response
 from services.retrieval import process_query
-from models.models import ChatRequest, ChatData
+from models.models import ChatData
 import logging
 import asyncio
 
@@ -19,15 +19,13 @@ async def answer(chat_data: ChatData):
         try:
             chunks = await process_query(query=max(chat_data.messages, key=lambda msg: msg.timestamp).content)
 
-            # Asenkron generator üzerinden token'ları tek tek yield ediyoruz.
             async for token in async_llm_stream_response(
                 chat_data.messages,
                 chunks,
             ):
-                # İsteğe bağlı: token'ı re.split ile işleyip boşluklar vs. koruyabilirsiniz.
                 yield token
-                await asyncio.sleep(0.05)  # Akışı yumuşatmak için isteğe bağlı gecikme
-            # Son tokenin sonuna newline ekle
+                await asyncio.sleep(0.05)
+            
             yield "\n"
             
         except Exception as e:

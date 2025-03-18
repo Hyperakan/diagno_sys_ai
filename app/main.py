@@ -1,22 +1,45 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+from utils.ollama_utils import create_ollama_client, delete_ollama_client
 from routers import chat
 import logging 
+import os 
 
 
-# Logger yapılandırması
 logging.basicConfig(
-    level=logging.INFO,  # INFO seviyesindeki logları göster
-    format="%(levelname)s:\t  %(message)s",  # Log formatını belirleyelim
+    level=logging.INFO, 
+    format="%(levelname)s:\t  %(message)s",  
 )
 
 logger = logging.getLogger(__name__)
 
-# Artık logger'ı bu şekilde kullanabilirsiniz
 logger.info("This is an info message from llm container.")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    FastAPI uygulaması başlatılırken modeli yükler ve weaviate collection olusturur, uygulama sonlandığında ise boşaltır.
+    """
+    try:
+        logging.info("Starting lifespan context - creating OLLAMA client.")
+        model_name = os.getenv("MODEL_NAME")
+        ollama_url = os.getenv("OLLAMA_URL")
+        temperature = float(os.getenv("TEMPERATURE"))
+        if model_name is None or ollama_url is None or temperature is None:
+            raise RuntimeError("MODEL_NAME, OLLAMA_URL, and TEMPERATURE environment variables must be set to use OLLAMA.")
+        else:
+            create_ollama_client(model_name=os.getenv("MODEL_NAME"), ollama_url=os.getenv("OLLAMA_URL"), temperature=float(os.getenv("TEMPERATURE")))
+        yield 
+    except Exception as e:
+        logging.error(f"Error during lifespan: {e}")
+        raise e
+    finally:
+        logging.info("Ending lifespan context - deleting OLLAMA client.")
+        delete_ollama_client()
+        
 
-app = FastAPI(title="LLM FastAPI", version="1.0.0")
+app = FastAPI(title="LLM FastAPI", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,7 +49,6 @@ app.add_middleware(
     allow_methods=["*"],
 )
 
-# Routers'ı dahil et
 app.include_router(chat.router, prefix="", tags=["Chat"])
 
 @app.get("/")
