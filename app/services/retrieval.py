@@ -10,5 +10,6 @@ async def process_query(query: str, top_k: int = 5):
             )
         response.raise_for_status()
         return response.json()
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"RAG Error: {str(e)}")

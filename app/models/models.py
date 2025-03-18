@@ -1,11 +1,6 @@
 from datetime import datetime 
 from pydantic import BaseModel
-from typing import Dict, Any, List, Optional
-class ChatRequest(BaseModel):
-    question: str
-    model_name: str
-    temperature: float
-    search: bool
+from typing import List, Optional
 
 class ChatInfo(BaseModel):
     id: Optional[str]  # ID might be empty or null

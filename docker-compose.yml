@@ -72,11 +72,13 @@ services:
       dockerfile: Dockerfile.app
     environment:
       - OLLAMA_URL=http://ollama:11434
+      - TEMPERATURE=0.2
+      - MODEL_NAME=llama3.2:1b
     container_name: diagno_sys
     ports:
       - "8501:8501"
     depends_on:
-      - weaviate
+      - rag_server
       - ollama
     networks:
       - diagno_sys_network

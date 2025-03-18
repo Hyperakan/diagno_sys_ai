@@ -29,15 +29,12 @@ def embed_and_index_documents(content: str, collection_name: str):
         model = get_embedding_model()
         client = get_client()
 
-        # Metni parçalara ayırıyoruz
         chunked_texts = chunk_text(content)
 
         embeddings = model.encode(chunked_texts, show_progress_bar=True)
 
-        # Belirtilen koleksiyonu alıyoruz
         collection = client.collections.get(collection_name)
 
-        # DataObject listesi oluşturuluyor
         data_objects = []
         for text, embedding in zip(chunked_texts, embeddings):
             properties={
@@ -50,7 +47,7 @@ def embed_and_index_documents(content: str, collection_name: str):
         try:    
             uuids = collection.data.insert_many(data_objects)
         except Exception as e:
-            logging.info(f"{e}")
+            logging.info(f"Error while inserting data to collection: {e}")
 
 def chunk_text(content: str, chunk_size: int = 512, overlap: int = 20) -> List[str]:
     model = get_embedding_model()
@@ -69,11 +66,8 @@ def split_text_on_tokens(*, text: str, tokenizer, chunk_size: int, chunk_overlap
         input_ids = tokenizer.encode(text)
         total_tokens = len(input_ids)
         
-        # Tokenizer nesnesinde modelin desteklediği maksimum token uzunluğunu alıyoruz. 
-        # Eğer bu özellik yoksa varsayılan değeri 8192 olarak alıyoruz.
         max_model_length = getattr(tokenizer, "model_max_length", 8192)
         
-        # Eğer istenen chunk_size modelin maksimum uzunluğundan büyükse, uyarı verip chunk_size'ı küçültüyoruz.
         if chunk_size > max_model_length:
             logging.info(
                 f"chunk_size ({chunk_size}) is greater than model's maximum sequence length ({max_model_length}). "
@@ -97,6 +91,6 @@ def split_text_on_tokens(*, text: str, tokenizer, chunk_size: int, chunk_overlap
         return splits
 
     except Exception as e:
-        logging.exception("Error occurred while splitting text on tokens:")
+        logging.exception(f"Error occurred while splitting text on tokens: {e}")
         return []
 
