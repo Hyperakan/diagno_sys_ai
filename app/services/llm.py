@@ -6,11 +6,13 @@ import threading
 import asyncio
 from typing import List
 from models.models import Message
+import logging
 
 def stream_response_with_context_sync(messages: List[Message], chunks, output_queue: queue.Queue):
     """
-    Senkron olarak Ollama container'ına .stream metodu ile prompt gönderir,
-    gelen token’ları output_queue'ya koyar.
+    Ollama container'ına prompt göndermek için, gelen chunks'tan section (bağlam)
+    oluşturur, kullanıcı mesajını prompt ile birleştirir ve llm.stream ile token'ları 
+    output_queue'ya aktarır.
     """
     ollama_url = os.getenv("OLLAMA_URL")
     if not ollama_url:
@@ -20,11 +22,30 @@ def stream_response_with_context_sync(messages: List[Message], chunks, output_qu
     llm = get_ollama_client()
 
     try:
-        #TODO change with create_section
-        context = chunks['results']['objects'][0]['properties']['context']
+        # chunks'tan section (bağlam) oluştur.
+        section_str = create_section(chunks)
+        section_msg = HumanMessage(content=section_str)
+
+        # Mesajlar arasında son kullanıcı mesajını bul.
+        last_user_message = max(messages, key=lambda msg: msg.timestamp)
+
+        if not last_user_message:
+            output_queue.put(ValueError("No user message found."))
+            return
+        user_msg = message_to_langchain_message(last_user_message)
+
+        # Kullanıcı mesajı ve section'ı kullanarak prompt oluştur.
+        system_prompt = """You are a healthcare assistant and you are answering a patient's question.
+        Do not forget to be professional and ethical in your answers.
+        Do not use citations or references in your answers.
+        Do not use technical terms that the patient cannot understand.
+        Do not ask any questions based on the context you provided.
+        Always suggest the patient to consult a healthcare professional for a proper diagnosis and treatment after answering the question."""
         
-        #TODO change with build_prompt
-        for token in llm.stream(([message_to_langchain_message(message) for message in messages]+[(HumanMessage(content=context))])):
+        prompt = build_prompt(user_msg, section_msg, system_prompt)
+        prompt_message = HumanMessage(content=prompt)
+        
+        for token in llm.stream([prompt_message]):
             output_queue.put(token.content)
     except Exception as e:
         output_queue.put(RuntimeError(f"LLM streaming çağrısında hata oluştu: {e}"))
@@ -33,7 +54,7 @@ def stream_response_with_context_sync(messages: List[Message], chunks, output_qu
 
 async def async_llm_stream_response(messages: List[Message], chunks):
     """
-    Synchronous stream'i, arka planda çalışan bir thread ve queue ile asenkron generator'a çevirir.
+    Senkron stream'i arka planda çalışan bir thread ve queue ile asenkron generator'a çevirir.
     """
     output_queue = queue.Queue()
     thread = threading.Thread(
@@ -50,24 +71,31 @@ async def async_llm_stream_response(messages: List[Message], chunks):
         if isinstance(token, Exception):
             raise token
         yield token
-        
+
 def message_to_langchain_message(message: Message):
     if message.sender == "user":
         return HumanMessage(content=message.content)
     else:
         return AIMessage(content=message.content)
-    
+
 def create_section(chunks):
     """
-    LLM'den gelen chunks'ı kullanarak, section oluşturur.
+    LLM'den gelen chunks verisini kullanarak section (bağlam) oluşturur.
+    Beklenen yapı: chunks içerisinde "query" ve "results" (her biri {id, context, score}) bulunur.
     """
     section = ""
-    for chunk in chunks['results']['objects']:
-        section += f"{chunk['properties']['context']}\n\n"
+    for chunk in chunks['results']:
+        section += f"{chunk['context']}\n\n"
     return section
 
-def build_prompt(message: HumanMessage, section: HumanMessage):
+def build_prompt(message: HumanMessage, section: HumanMessage, system_prompt: str):
     """
-    LLM için prompt oluşturur.
+    Oluşturulan section, sistem prompt ve kullanıcı mesajını kullanarak LLM için prompt oluşturur.
     """
-    return f"Context:\n{section.content}\n\nQuestion:\n{message.content}\n\nAnswer:"
+    return (
+        f"System:\n{system_prompt}\n\n"
+        f"Context:\n{section.content}\n\n"
+        f"Question:\n{message.content}\n\n"
+        "Answer:"
+    )
+

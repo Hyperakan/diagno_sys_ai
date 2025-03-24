@@ -1,11 +1,13 @@
 from uuid import uuid4
 from models.models import QueryRequest
 from utils.model_utils import get_embedding_model
+from utils.model_utils import get_reranker_model
 from weaviate.classes.data import DataObject
 from weaviate.classes.query import MetadataQuery
+from weaviate.collections.classes.internal import QueryReturn
 from utils.vector_db_utils import get_client
 from typing import List
-import os
+import torch
 import logging
 
 def search_documents(query_obj: QueryRequest):  
@@ -23,7 +25,44 @@ def search_documents(query_obj: QueryRequest):
     )
     
     return relevant_chunks
+
+def rerank_documents(query_obj: QueryRequest, context_and_scores: List[dict]):
+    try: 
+        model = get_reranker_model()
+        model.model.eval()
+        query = query_obj.query
+        contexts = [result["context"] for result in context_and_scores]
+        query_context_pairs = [[query, context] for context in contexts]
+        
+        with torch.no_grad():
+            inputs = model.tokenizer(query_context_pairs, padding=True, truncation=True, return_tensors="pt")
+            device = next(model.model.parameters()).device  # Get the device of the model
+            inputs = {k: v.to(device) for k, v in inputs.items()}  # Move inputs to that device
+            scores = model.model(**inputs).logits.view(-1).tolist()
+        
+        for i, result in enumerate(context_and_scores):
+            result["score"] = scores[i]
+        
+        reranked_search_results = sorted(context_and_scores, key=lambda x: x["score"], reverse=True)
+        
+        return reranked_search_results
+    except Exception as e:
+        logging.error(f"Error during reranking: {e}")
+        
     
+def construct_context_and_score_list(search_results: QueryReturn):
+    try:
+        context_and_scores = []
+        for result in search_results.objects:
+            context_and_scores.append({
+                "id": result.uuid.int,
+                "context": result.properties["context"],
+                "score": result.metadata.score
+            })
+        return context_and_scores
+    except Exception as e:
+        logging.error(f"Error during constructing context and score dict: {e}")
+       
 
 def embed_and_index_documents(content: str, collection_name: str):
         model = get_embedding_model()

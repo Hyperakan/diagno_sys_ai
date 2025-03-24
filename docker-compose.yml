@@ -30,11 +30,13 @@ services:
       dockerfile: Dockerfile.rag
     volumes:
       - model_data:/app/embedding_models
+      - model_data:/app/reranker_models
     depends_on:
       - weaviate
     environment:
       - WEAVIATE_URL=http://weaviate:8080
-      - MODEL_NAME=BAAI/bge-m3
+      - EMBEDDING_MODEL_NAME=BAAI/bge-m3
+      - RERANKER_MODEL_NAME=BAAI/bge-reranker-v2-m3
       - COLLECTION_NAME=med_documents
     ports:
       - "8001:8001"
@@ -72,8 +74,8 @@ services:
       dockerfile: Dockerfile.app
     environment:
       - OLLAMA_URL=http://ollama:11434
-      - TEMPERATURE=0.2
-      - MODEL_NAME=llama3.2:1b
+      - TEMPERATURE=0.4
+      - MODEL_NAME=mistral
     container_name: diagno_sys
     ports:
       - "8501:8501"

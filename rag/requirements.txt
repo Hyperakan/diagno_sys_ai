@@ -3,4 +3,4 @@ fastapi[standard]
 uvicorn
 pydantic
 weaviate-client
-langchain-text-splitters
+transformers
