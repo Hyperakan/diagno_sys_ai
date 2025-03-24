@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from routers import search
 from contextlib import asynccontextmanager
-from utils.model_utils import load_embedding_model, unload_embedding_model
+from utils.model_utils import load_embedding_model, unload_embedding_model, load_reranker_model, unload_reranker_model
 from utils.vector_db_utils import create_client, create_collection, close_client_conection
 import logging 
 import os
@@ -24,6 +24,7 @@ async def lifespan(app: FastAPI):
     try:
         logging.info("Starting lifespan context - loading model.")
         load_embedding_model()  
+        load_reranker_model()
         logging.info("Creating Weaviate client and collection.")
         create_client()
         create_collection(collection_name=os.getenv("COLLECTION_NAME"))
@@ -34,6 +35,7 @@ async def lifespan(app: FastAPI):
     finally:
         logging.info("Ending lifespan context - unloading model.")
         unload_embedding_model() 
+        unload_reranker_model()
         close_client_conection()
 
 app = FastAPI(title="RAG API", version="1.0.0", lifespan=lifespan)

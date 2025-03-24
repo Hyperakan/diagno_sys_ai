@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from fastapi import File, UploadFile
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import os
 
 class QueryRequest(BaseModel):
@@ -11,4 +12,9 @@ class QueryRequest(BaseModel):
 class IndexDocumentRequest(BaseModel):
     file: UploadFile = File(...)
     collection_name: str = os.getenv("COLLECTION_NAME")
+    
+class RerankerModel():
+    model: AutoModelForSequenceClassification
+    tokenizer: AutoTokenizer
+    use_fp16: bool = False
     
