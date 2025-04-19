@@ -36,15 +36,19 @@ def rerank_documents(query_obj: QueryRequest, context_and_scores: List[dict]):
         
         with torch.no_grad():
             inputs = model.tokenizer(query_context_pairs, padding=True, truncation=True, return_tensors="pt")
-            device = next(model.model.parameters()).device  # Get the device of the model
-            inputs = {k: v.to(device) for k, v in inputs.items()}  # Move inputs to that device
+            device = next(model.model.parameters()).device  # Modelin çalıştığı cihazı al
+            inputs = {k: v.to(device) for k, v in inputs.items()}  # Girdileri ilgili cihaza taşı
             scores = model.model(**inputs).logits.view(-1).tolist()
         
+        # Her belgeye ilgili skoru ekle
         for i, result in enumerate(context_and_scores):
             result["score"] = scores[i]
         
-        reranked_search_results = sorted(context_and_scores, key=lambda x: x["score"], reverse=True)
+        # Skoru -1'in altında olan belgeleri hariç tut
+        filtered_results = [result for result in context_and_scores if result["score"] >= -1]
         
+        # Kalan sonuçları skora göre azalan sırada yeniden sırala
+        reranked_search_results = sorted(filtered_results, key=lambda x: x["score"], reverse=True)
         return reranked_search_results
     except Exception as e:
         logging.error(f"Error during reranking: {e}")

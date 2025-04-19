@@ -23,6 +23,7 @@ def read_all_files_in_folder_extract_content(folder_path):
     try:
         file_list = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
         for filename in tqdm(file_list, desc="Dosyalar okunuyor"):
+            print(filename)
             file_path = os.path.join(folder_path, filename)
             content = parse_document(file_path=file_path)
             if filename.endswith(".pdf"):
@@ -46,6 +47,6 @@ def write_files(contents: list, folder_path):
             file.write(item["content"])
             
 
-documents = read_all_files_in_folder_extract_content("/home/onur-dev/Workspace/diagno_sys_ai/dummy_docs")
+documents = read_all_files_in_folder_extract_content("/home/onur-dev/Workspace/diagno_sys_ai/tus_docs")
 
 write_files(documents, "./extracted_txts")
