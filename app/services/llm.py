@@ -7,6 +7,7 @@ import asyncio
 from typing import List
 from models.models import Message
 import logging
+from fastapi import HTTPException
 
 def stream_response_with_context_sync(messages: List[Message], chunks, output_queue: queue.Queue):
     """
@@ -99,3 +100,42 @@ def build_prompt(message: HumanMessage, section: HumanMessage, system_prompt: st
         "Answer:"
     )
 
+async def name_chat(messages: List[Message]):
+    """
+    LLM'e sohbet başlığı oluşturması için bir istek gönderir.
+    """
+    # Ollama'ya bağlanmak için URL kontrolü
+    if not os.getenv("OLLAMA_URL"):
+        raise ValueError("OLLAMA_URL environment variable is not set.")
+
+    llm = get_ollama_client()
+
+    # 1) Sistem prompt'u
+    system_prompt = (
+        "You are a helpful assistant that, given a conversation, "
+        "proposes a concise and descriptive title for it. "
+        "Respond with only the title, no extra text."
+    )
+    messages = [HumanMessage(content=system_prompt)]
+    
+    for msg in sorted(messages, key=lambda m: m.timestamp):
+        messages.append(message_to_langchain_message(msg))
+
+    # 3) Başlık isteğini ekle
+    messages.append(HumanMessage(content="Please provide a short chat title:"))
+
+    try:
+        # llm.generate çağrısını thread pool'da çalıştır
+        loop = asyncio.get_running_loop()
+        llm_result = await loop.run_in_executor(
+            None,
+            lambda: llm.generate(messages)
+        )
+
+        # LangChain LLMResult → generations[0][0].text
+        title = llm_result.generations[0][0].text.strip()
+        return {"name": title}
+
+    except Exception as e:
+        logging.error(f"Error generating chat name: {e}")
+        raise HTTPException(status_code=500, detail="Error generating chat name")
