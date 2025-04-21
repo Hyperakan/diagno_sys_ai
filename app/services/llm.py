@@ -1,4 +1,4 @@
-from utils.ollama_utils import get_ollama_client
+from utils.ollama_utils import OllamaClientFactory
 from langchain_core.messages import HumanMessage, AIMessage
 import os
 import queue
@@ -20,7 +20,7 @@ def stream_response_with_context_sync(messages: List[Message], chunks, output_qu
         output_queue.put(ValueError("OLLAMA_URL environment variable is not set."))
         return
 
-    llm = get_ollama_client()
+    llm = OllamaClientFactory.get_client(role="chat")
 
     try:
         # chunks'tan section (bağlam) oluştur.
@@ -108,7 +108,7 @@ async def name_chat(messages: List[Message]):
     if not os.getenv("OLLAMA_URL"):
         raise ValueError("OLLAMA_URL environment variable is not set.")
 
-    llm = get_ollama_client()
+    llm = OllamaClientFactory.get_client(role="namer")
 
     # 1) Sistem prompt'u
     system_prompt = (

@@ -75,7 +75,8 @@ services:
     environment:
       - OLLAMA_URL=http://ollama:11434
       - TEMPERATURE=0.4
-      - MODEL_NAME=mistral
+      - CHAT_MODEL_NAME=mistral
+      - NAMER_MODEL_NAME=llama3.2:1b
     container_name: diagno_sys
     ports:
       - "8501:8501"
