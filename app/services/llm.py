@@ -143,8 +143,10 @@ async def name_chat(messages: List[Message]):
 def generate_analyize_response(prompt: str):
     analyzer_ollama_client = OllamaClientFactory.get_client(role="analyzer")
     try:
-        response = analyzer_ollama_client([HumanMessage(content=prompt)])
-        return response.generations[0][0].text
+        response = analyzer_ollama_client.generate(
+            messages=[[HumanMessage(content=prompt)]]
+        )
+        return response.generations[0][0].text.strip()
     except Exception as e:
-        logging.error(f"Error generating analysis response: {e}")
+        logging.error(f"Error generating analysis response: {e.with_traceback()}")
         raise HTTPException(status_code=500, detail="Error generating analysis response")

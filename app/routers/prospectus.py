@@ -6,7 +6,7 @@ from typing import List
 import requests
 from pathlib import Path
 
-our_path = Path(__file__).parent.resolve()
+our_path = Path(__file__).parent.parent.resolve()
 
 # Directory containing prospectus files
 PROSPECTUS_DIR = our_path / "prospectuses"
@@ -23,6 +23,7 @@ async def analyze_prospectuses(request: ProspectusRequest):
     current_texts: List[str] = []
     for filename in request.current_prospectuses:
         file_path = PROSPECTUS_DIR / filename
+        print(f"Reading file: {file_path}")
         if not file_path.exists():
             raise HTTPException(status_code=404, detail=f"File not found: {filename}")
         try:

@@ -18,10 +18,7 @@ class ChatData(BaseModel):
     messages: List[Message]
     
 class ProspectusRequest(BaseModel):
-    current_prospectuses: List[str] = Field(..., alias="current prospectuses")
-    new_prospectus: str = Field(..., alias="new prospectus")
+    current_prospectuses: List[str]
+    new_prospectus: str
 
-    class Config:
-        allow_population_by_alias = True
-        populate_by_name = True
     
