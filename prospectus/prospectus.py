@@ -1,6 +1,6 @@
-# prospectus.py (located at /Users/hakandogan/bitirme/diagno_sys_ai/prospectus/prospectus.py)
 import requests
 from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
 from pydantic import BaseModel, Field
 from typing import List
 from pathlib import Path
@@ -9,6 +9,10 @@ from pathlib import Path
 HOST = "http://localhost:11434"
 MODEL_NAME = "llama3.2:1b"
 our_path = Path(__file__).parent.parent.resolve()
+
+# Directory containing prospectus files
+PROSPECTUS_DIR = our_path / "prospectuses"
+
 
 # Directory containing prospectus files
 PROSPECTUS_DIR = our_path / "prospectuses"
@@ -43,15 +47,9 @@ def generate_response(prompt: str) -> str:
     data = resp.json()
     return data.get("response", "")
 
-# FastAPI app initialization
-app = FastAPI()
-
-@app.on_event("startup")
-def on_startup():
-    """
-    At application startup, verify Ollama server and pull model if necessary.
-    """
-    # Version check
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: verify Ollama server and pull model
     try:
         resp = requests.get(f"{HOST}/api/version")
         resp.raise_for_status()
@@ -61,6 +59,13 @@ def on_startup():
 
     # Pull model
     pull_model()
+    
+    yield
+    
+    # Cleanup (if needed)
+    pass
+
+app = FastAPI(lifespan=lifespan)
 
 class ProspectusRequest(BaseModel):
     current_prospectuses: List[str] = Field(..., alias="current prospectuses")
