@@ -139,3 +139,12 @@ async def name_chat(messages: List[Message]):
     except Exception as e:
         logging.error(f"Error generating chat name: {e}")
         raise HTTPException(status_code=500, detail="Error generating chat name")
+    
+def generate_analyize_response(prompt: str):
+    analyzer_ollama_client = OllamaClientFactory.get_client(role="analyzer")
+    try:
+        response = analyzer_ollama_client([HumanMessage(content=prompt)])
+        return response.generations[0][0].text
+    except Exception as e:
+        logging.error(f"Error generating analysis response: {e}")
+        raise HTTPException(status_code=500, detail="Error generating analysis response")

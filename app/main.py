@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from utils.ollama_utils import OllamaClientFactory
 from routers import chat
+from routers import prospectus
 import logging 
 import os 
 
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI):
         logging.info("Starting lifespan context - creating OLLAMA client.")
         chat_model_name = os.getenv("CHAT_MODEL_NAME")
         namer_model_name = os.getenv("NAMER_MODEL_NAME")
+        analyzer_model_name = os.getenv("ANALYZER_MODEL_NAME")
         ollama_url = os.getenv("OLLAMA_URL")
         temperature = float(os.getenv("TEMPERATURE"))
         if chat_model_name is None or namer_model_name is None or ollama_url is None or temperature is None:
@@ -42,6 +44,12 @@ async def lifespan(app: FastAPI):
                 base_url=ollama_url,
                 temperature=temperature
             )
+            OllamaClientFactory.create_client(
+                role="analyzer",
+                model_name=analyzer_model_name,
+                base_url=ollama_url,
+                temperature=temperature
+            )
         yield 
     except Exception as e:
         logging.error(f"Error during lifespan: {e}")
@@ -50,6 +58,7 @@ async def lifespan(app: FastAPI):
         logging.info("Ending lifespan context - deleting OLLAMA client.")
         OllamaClientFactory.delete_client(role="chat")
         OllamaClientFactory.delete_client(role="namer")
+        OllamaClientFactory.delete_client(role="analyzer")
         
 
 app = FastAPI(title="LLM FastAPI", version="1.0.0", lifespan=lifespan)
@@ -63,6 +72,7 @@ app.add_middleware(
 )
 
 app.include_router(chat.router, prefix="", tags=["Chat"])
+app.include_router(prospectus.router, prefix="", tags=["Prospectus"])
 
 @app.get("/")
 def root():
