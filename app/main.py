@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
             )
             OllamaClientFactory.create_client(
                 role="analyzer",
-                model_name=namer_model_name,
+                model_name=analyzer_model_name,
                 base_url=ollama_url,
                 temperature=temperature
             )

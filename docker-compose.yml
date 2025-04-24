@@ -77,7 +77,7 @@ services:
       - TEMPERATURE=0.4
       - CHAT_MODEL_NAME=mistral
       - NAMER_MODEL_NAME=llama3.2:1b
-      - ANALYZER_MODEL_NAME=gemma3
+      - ANALYZER_MODEL_NAME=mistral
     container_name: diagno_sys
     ports:
       - "8501:8501"
