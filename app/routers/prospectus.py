@@ -1,9 +1,11 @@
 from fastapi import APIRouter
 from fastapi import HTTPException
+from fastapi.responses import Response
 from models.models import ProspectusRequest
 from services.llm import generate_analyze_response
 import httpx
 import requests
+import json
 
 import logging
 
@@ -26,13 +28,13 @@ async def analyze_prospectuses(request: ProspectusRequest):
         drug_names.append(request.new_prospectus)
         
     url = "https://kt-finder-676470519300.europe-west1.run.app"
-    json = {
+    json_payload = {
         "kullanilan_ilaclar":  drug_names,
     }
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, json=json, timeout=10)
+            response = await client.post(url, json=json_payload, timeout=10)
             
             if response.status_code != 200:
                 logging.info(f"Response status code: {response.status_code}, response content: {response.content}")
@@ -58,4 +60,8 @@ async def analyze_prospectuses(request: ProspectusRequest):
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Ollama request failed: {e}")
 
-    return {"prompt":prompt, "analysis": analysis}
+    return Response(
+            content=json.dumps({"analysis": analysis}, ensure_ascii=False).encode(encoding="utf-8"),
+            media_type="application/json",
+            headers={"Content-Type": "application/json; charset=utf-8"}
+    )
