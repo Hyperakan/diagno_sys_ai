@@ -15,7 +15,7 @@ def get_client():
 def create_collection(collection_name: str):
     client = get_client()
     if not client.collections.exists(collection_name):
-        med_documents = client.collections.create(
+        _ = client.collections.create(
             name = collection_name,
             vectorizer_config = Configure.Vectorizer.none(),
         )

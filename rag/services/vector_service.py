@@ -1,4 +1,5 @@
-from uuid import uuid4
+from tqdm import tqdm
+import math
 from models.models import QueryRequest
 from utils.model_utils import get_embedding_model
 from utils.model_utils import get_reranker_model
@@ -97,6 +98,7 @@ def chunk_text(content: str, chunk_size: int = 512, overlap: int = 20) -> List[s
 
     return split_text_on_tokens(text=content, tokenizer=model.tokenizer, chunk_size=chunk_size, chunk_overlap=overlap)
 
+
 def split_text_on_tokens(*, text: str, tokenizer, chunk_size: int, chunk_overlap: int) -> List[str]:
     """
     Verilen metni, tokenizer kullanarak parçalara ayırır.
@@ -108,9 +110,8 @@ def split_text_on_tokens(*, text: str, tokenizer, chunk_size: int, chunk_overlap
         splits: List[str] = []
         input_ids = tokenizer.encode(text)
         total_tokens = len(input_ids)
-        
+
         max_model_length = getattr(tokenizer, "model_max_length", 8192)
-        
         if chunk_size > max_model_length:
             logging.info(
                 f"chunk_size ({chunk_size}) is greater than model's maximum sequence length ({max_model_length}). "
@@ -118,18 +119,29 @@ def split_text_on_tokens(*, text: str, tokenizer, chunk_size: int, chunk_overlap
             )
             chunk_size = max_model_length
 
+        step = chunk_size - chunk_overlap
+        # Toplam kaç parça çıkacağını hesapla (en az 1)
+        if total_tokens <= chunk_size:
+            total_chunks = 1
+        else:
+            total_chunks = math.ceil((total_tokens - chunk_size) / step) + 1
+
         start_idx = 0
-        while start_idx < total_tokens:
-            end_idx = min(start_idx + chunk_size, total_tokens)
-            chunk_ids = input_ids[start_idx:end_idx]
-            try:
-                splits.append(tokenizer.decode(chunk_ids))
-            except Exception as ex:
-                logging.info(f"{ex}")
-            if end_idx == total_tokens:
-                break
-            
-            start_idx += chunk_size - chunk_overlap
+        # tqdm ile ilerleme çubuğu
+        with tqdm(total=total_chunks, desc="Splitting text into chunks") as pbar:
+            while start_idx < total_tokens:
+                end_idx = min(start_idx + chunk_size, total_tokens)
+                chunk_ids = input_ids[start_idx:end_idx]
+                try:
+                    splits.append(tokenizer.decode(chunk_ids))
+                except Exception as ex:
+                    logging.info(f"Decoding error: {ex}")
+
+                pbar.update(1)
+                if end_idx == total_tokens:
+                    break
+
+                start_idx += step
 
         return splits
 

@@ -189,23 +189,29 @@ def test_usmle_dataset(model_name):
     df.to_csv('/Users/hakandogan/bitirme/test_pipeline/MedQA-USMLE-Partial-with-llm-answers.csv', index=False)
 
 
+def test_prospectus():
+    try:
+        response = requests.post(
+            url="http://localhost:8501/prospectus/analyze",
+            json={
+                "current_prospectuses": ["aspirin.txt", "paracetamol.txt"],
+                "new_prospectus": "katarin.txt"
+            },
+            headers={
+                "Content-Type": "application/json"
+            }
+        )
+        response.raise_for_status()
+        print(json.dumps(response.json(), indent=2, ensure_ascii=False))
+    except requests.RequestException as e:
+        print(f"{response.content}")
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
 
 def main():
-    #check_version()
-    #list_local_models()
-    # Change 'llama3.2' to your desired model if different
-    #MODEL_NAME = "llama3.2:1b"
-    MODEL_NAME = "deepseek-r1:7b"
-    pull_model(MODEL_NAME)
-    #test_generate(MODEL_NAME)
-    #test_answer(MODEL_NAME)
-    #test_tus_dataset(MODEL_NAME)
-    #df = pd.read_csv('/Users/hakandogan/bitirme/test_pipeline/MedQA-USMLE-Partial-with-llm-answers.csv')
-    #calculate_accuracy_tus(df)
-    test_usmle_dataset(MODEL_NAME)
-    df = pd.read_csv('/Users/hakandogan/bitirme/test_pipeline/MedQA-USMLE-Partial-with-llm-answers.csv')
-    calculate_accuracy_usmle(df)
-    #test_chat(MODEL_NAME)
+
+    test_prospectus()
 
     print("\n=== Test pipeline complete. ===")
 

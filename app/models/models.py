@@ -1,5 +1,5 @@
 from datetime import datetime 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 
 class ChatInfo(BaseModel):
@@ -16,4 +16,9 @@ class Message(BaseModel):
 class ChatData(BaseModel):
     chatInfo: ChatInfo
     messages: List[Message]
+    
+class ProspectusRequest(BaseModel):
+    current_prospectuses: List[str]
+    new_prospectus: str
+
     
