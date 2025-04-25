@@ -4,7 +4,6 @@ from models.models import ProspectusRequest
 from services.llm import generate_analyze_response
 import httpx
 import requests
-from pathlib import Path
 
 import logging
 

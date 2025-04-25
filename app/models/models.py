@@ -14,6 +14,7 @@ class Message(BaseModel):
     sender: str
     
 class ChatData(BaseModel):
+    userId: str
     chatInfo: ChatInfo
     messages: List[Message]
     
