@@ -113,7 +113,7 @@ async def name_chat(messages: List[Message]):
 
     # 1) Sistem prompt'u
     system_prompt = (
-        "Bir konuşma verildiğinde ona kısa ve açıklayıcı bir başlık öneren yardımcı bir asistansınız. "
+        "Bir konuşma verildiğinde ona kısa ve açıklayıcı bir başlık öneren yardımcı bir asistansın. "
         "Yalnızca başlıkla yanıtlayın, başka metin eklemeyin. 5 kelimeden fazla olmamalı. "
     )
     prompt = [SystemMessage(content=system_prompt)]
