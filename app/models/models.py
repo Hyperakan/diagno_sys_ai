@@ -19,7 +19,6 @@ class ChatData(BaseModel):
     messages: List[Message]
     
 class ProspectusRequest(BaseModel):
-    current_prospectuses: List[str]
-    new_prospectus: str
+    drugs: List[str]
 
     

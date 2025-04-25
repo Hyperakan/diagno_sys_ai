@@ -1,5 +1,5 @@
 from utils.ollama_utils import OllamaClientFactory
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 import os
 import queue
 import threading
@@ -8,6 +8,8 @@ from typing import List
 from models.models import Message
 import logging
 from fastapi import HTTPException
+from fastapi.responses import Response
+import json
 
 def stream_response_with_context_sync(messages: List[Message], chunks, output_queue: queue.Queue):
     """
@@ -25,28 +27,22 @@ def stream_response_with_context_sync(messages: List[Message], chunks, output_qu
     try:
         # chunks'tan section (bağlam) oluştur.
         section_str = create_section(chunks)
-        section_msg = HumanMessage(content=section_str)
 
-        # Mesajlar arasında son kullanıcı mesajını bul.
-        last_user_message = max(messages, key=lambda msg: msg.timestamp)
+        # Build full prompt, including system, context, and conversation history
+        system_prompt = (
+            "Tıp alanında bilgi bir asistansın. Sadece önerilerde bulunabilirsin. Görevin teşhis koymak ve ilgili polikliniğe yönlendirmek. "
+            "Tıp alanı dışındaki sorulara cevap verme."
+            "Aşağıda, <doktor> ve <hasta> etiketleriyle gösterilmiş bir diyalog ve ilgili bilgilerin yer aldığı <bağlam> bölümü bulunuyor. "
+            "Sen <doktor> rolündesin; bu sohbette yer alan bir sonraki <doktor> yanıtını yalnızca Türkçe olarak oluştur."
+        )
 
-        if not last_user_message:
-            output_queue.put(ValueError("No user message found."))
-            return
-        user_msg = message_to_langchain_message(last_user_message)
-
-        # Kullanıcı mesajı ve section'ı kullanarak prompt oluştur.
-        system_prompt = """You are a healthcare assistant and you are answering a patient's question.
-        Do not forget to be professional and ethical in your answers.
-        Do not use citations or references in your answers.
-        Do not use technical terms that the patient cannot understand.
-        Do not ask any questions based on the context you provided.
-        Always suggest the patient to consult a healthcare professional for a proper diagnosis and treatment after answering the question.
-        If the question between two <q>'s does not require any knowledge to answer, ignore the provided content between two <ctx>'s."""
-        
-        prompt = build_prompt(user_msg, section_msg, system_prompt)
-        prompt_message = HumanMessage(content=prompt)
+        # create_prompt now handles parsing of messages into tagged conversation
+        prompt_text = build_prompt(messages, section_str, system_prompt)
+        prompt_message = HumanMessage(content=prompt_text)
+        logging.info(f"Prompt: {prompt_message.content}")
         for token in llm.stream([prompt_message]):
+            if "<hasta>:" in token.content:
+                break
             output_queue.put(token.content)
     except Exception as e:
         output_queue.put(RuntimeError(f"LLM streaming çağrısında hata oluştu: {e}"))
@@ -76,29 +72,34 @@ async def async_llm_stream_response(messages: List[Message], chunks):
 def message_to_langchain_message(message: Message):
     if message.sender == "user":
         return HumanMessage(content=message.content)
-    else:
+    elif message.sender == "bot":
         return AIMessage(content=message.content)
 
 def create_section(chunks):
-    """
-    LLM'den gelen chunks verisini kullanarak section (bağlam) oluşturur.
-    Beklenen yapı: chunks içerisinde "query" ve "results" (her biri {id, context, score}) bulunur.
-    """
     section = ""
     for chunk in chunks['results']:
         section += f"{chunk['context']}\n\n"
     return section
 
-def build_prompt(message: HumanMessage, section: HumanMessage, system_prompt: str):
+def build_prompt(messages: List[Message], section: str, system_prompt: str) -> str:
     """
-    Oluşturulan section, sistem prompt ve kullanıcı mesajını kullanarak LLM için prompt oluşturur.
+    Sistemi, bağlamı ve sohbet geçmişini alıp tek bir prompt stringine çevirir.
+    Mesajları <hasta> ve <doktor> tagları arasında çifttagi ile işaretler.
     """
-    return (
-        f"<sys>\n{system_prompt}\n<sys>\n\n"
-        f"<ctx>\n{section.content}<ctx>\n\n"
-        f"<q>\n{message.content}\n<q>\n\n"
-        "Answer:"
-    )
+    # Sistem bloğu
+    prompt = f"\n{system_prompt}\n\n"
+    # Bağlam bloğu
+    prompt += f"<bağlam>\n{section.strip()}\n<bağlam>\n\n"
+    # Sohbet geçmişi
+    for msg in sorted(messages, key=lambda m: m.timestamp):
+        content = msg.content.strip()
+        if msg.sender == "user":
+            prompt += f"<hasta>: {content}\n"
+        else:
+            prompt += f"<doktor>: {content}\n"
+    # Doktorun bir sonraki cevabı için açılış tagı
+    prompt += "<doktor>: "
+    return prompt
 
 async def name_chat(messages: List[Message]):
     """
@@ -112,32 +113,35 @@ async def name_chat(messages: List[Message]):
 
     # 1) Sistem prompt'u
     system_prompt = (
-        "You are a helpful assistant that, given a conversation, "
-        "proposes a concise and descriptive title for it. "
-        "Respond with only the title, no extra text."
+        "Bir konuşma verildiğinde ona kısa ve açıklayıcı bir başlık öneren yardımcı bir asistansın. "
+        "Yalnızca başlıkla yanıtlayın, başka metin eklemeyin. 5 kelimeden fazla olmamalı. "
     )
-    messages = [HumanMessage(content=system_prompt)]
+    prompt = [SystemMessage(content=system_prompt)]
     
     for msg in sorted(messages, key=lambda m: m.timestamp):
-        messages.append(message_to_langchain_message(msg))
+        prompt.append(message_to_langchain_message(msg))
 
     # 3) Başlık isteğini ekle
-    messages.append(HumanMessage(content="Please provide a short chat title:"))
+    prompt.append(HumanMessage(content="Please provide a short chat title:"))
 
     try:
         # llm.generate çağrısını thread pool'da çalıştır
         loop = asyncio.get_running_loop()
         llm_result = await loop.run_in_executor(
             None,
-            lambda: llm.generate(messages)
+            lambda: llm.invoke(prompt, stop=["\n"])
+        )
+        
+        title = llm_result.content.strip()
+        logging.info(f"Generated chat title: {title}")
+        return Response(
+            content=json.dumps({"name": title}, ensure_ascii=False).encode(encoding="utf-8"),
+            media_type="application/json",
+            headers={"Content-Type": "application/json; charset=utf-8"}
         )
 
-        # LangChain LLMResult → generations[0][0].text
-        title = llm_result.generations[0][0].text.strip()
-        return {"name": title}
-
     except Exception as e:
-        logging.error(f"Error generating chat name: {e}")
+        logging.error(f"Error generating chat name: {e.with_traceback()}")
         raise HTTPException(status_code=500, detail="Error generating chat name")
     
 def generate_analyze_response(prompt: str):

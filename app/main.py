@@ -72,7 +72,7 @@ app.add_middleware(
 )
 
 app.include_router(chat.router, prefix="", tags=["Chat"])
-app.include_router(prospectus.router, prefix="", tags=["Prospectus"])
+app.include_router(prospectus.router, prefix="", tags=["Drug"])
 
 @app.get("/")
 def root():

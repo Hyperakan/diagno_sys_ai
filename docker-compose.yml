@@ -72,12 +72,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.app
+      #https://b9zbcrb3kof786-11434.proxy.runpod.net/ oozcan361/diagnosys_v0.1:70b
     environment:
-      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_URL=https://b9zbcrb3kof786-11434.proxy.runpod.net/
       - TEMPERATURE=0.4
-      - CHAT_MODEL_NAME=mistral
-      - NAMER_MODEL_NAME=llama3.2:1b
-      - ANALYZER_MODEL_NAME=mistral
+      - CHAT_MODEL_NAME=oozcan361/diagnosys_v0.1:70b
+      - NAMER_MODEL_NAME=llama3.1
+      - ANALYZER_MODEL_NAME=oozcan361/diagnosys_v0.1:70b
     container_name: diagno_sys
     ports:
       - "8501:8501"
