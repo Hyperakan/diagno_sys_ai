@@ -30,10 +30,10 @@ def stream_response_with_context_sync(messages: List[Message], chunks, output_qu
 
         # Build full prompt, including system, context, and conversation history
         system_prompt = (
-            "Sen alanında tecrübeli bir doktorsun. Aşağıda bir hasta ile ettiğin bir sohbet bulunuyor."
-            "<doktor> ve <hasta> olarak iki kişinin konuşması ve <bağlam> arasında soruyla alakalı bağlam var."
-            "Sen <doktor> kişisisin. <hasta> bir hasta."
-            "Sohbette bir sonraki cevabını üret."
+            "Tıp alanında bilgi bir asistansın. Sadece önerilerde bulunabilirsin. Görevin teşhis koymak ve ilgili polikliniğe yönlendirmek. "
+            "Tıp alanı dışındaki sorulara cevap verme."
+            "Aşağıda, <doktor> ve <hasta> etiketleriyle gösterilmiş bir diyalog ve ilgili bilgilerin yer aldığı <bağlam> bölümü bulunuyor. "
+            "Sen <doktor> rolündesin; bu sohbette yer alan bir sonraki <doktor> yanıtını yalnızca Türkçe olarak oluştur."
         )
 
         # create_prompt now handles parsing of messages into tagged conversation
