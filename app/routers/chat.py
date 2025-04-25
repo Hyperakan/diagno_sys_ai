@@ -46,7 +46,7 @@ async def get_name(chat_data: ChatData):
     # Eğer kullanıcı zaten özelleştirilmiş bir isim vermişse, onu koru.
     if chat_data.chatInfo.name != "Yeni Sohbet":
         return Response(
-            content=json.dumps({"name": "ğüş"}, ensure_ascii=False).encode(encoding="utf-8"),
+            content=json.dumps({"name": chat_data.chatInfo.name}, ensure_ascii=False).encode(encoding="utf-8"),
             media_type="application/json",
             headers={"Content-Type": "application/json; charset=utf-8"}
         ) 
