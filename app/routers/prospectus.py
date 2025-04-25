@@ -1,15 +1,12 @@
 from fastapi import APIRouter
 from fastapi import HTTPException
 from models.models import ProspectusRequest
-from services.llm import generate_analyize_response
-from typing import List
+from services.llm import generate_analyze_response
+import httpx
 import requests
 from pathlib import Path
 
-our_path = Path(__file__).parent.parent.resolve()
-
-# Directory containing prospectus files
-PROSPECTUS_DIR = our_path / "prospectuses"
+import logging
 
 router = APIRouter(prefix="/prospectus")
 
@@ -19,43 +16,46 @@ async def analyze_prospectuses(request: ProspectusRequest):
     Read plain-text prospectus files from disk and analyze potential interactions and side effects.
     Handles empty file content scenarios.
     """
-    # Read existing prospectus contents
-    current_texts: List[str] = []
-    for filename in request.current_prospectuses:
-        file_path = PROSPECTUS_DIR / filename
-        print(f"Reading file: {file_path}")
-        if not file_path.exists():
-            raise HTTPException(status_code=404, detail=f"File not found: {filename}")
-        try:
-            text = file_path.read_text(encoding="utf-8")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error reading {filename}: {e}")
-        if not text.strip():
-            raise HTTPException(status_code=400, detail=f"Prospectus content is empty: {filename}")
-        current_texts.append(text)
+    drug_names = []
+    # merge request.current_prospectuses and request.new_prospectuses in drug_names
+    for prospectus in request.current_prospectuses:
+        if isinstance(prospectus, str):
+            drug_names.append(prospectus)
+        else:
+            raise HTTPException(status_code=400, detail="Invalid prospectus format")
+    if isinstance(request.new_prospectus, str):
+        drug_names.append(request.new_prospectus)
+        
+    url = "https://kt-finder-676470519300.europe-west1.run.app"
+    json = {
+        "kullanilan_ilaclar":  drug_names,
+    }
 
-    # Read new prospectus
-    new_path = PROSPECTUS_DIR / request.new_prospectus
-    if not new_path.exists():
-        raise HTTPException(status_code=404, detail=f"File not found: {request.new_prospectus}")
     try:
-        new_text = new_path.read_text(encoding="utf-8")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading {request.new_prospectus}: {e}")
-    if not new_text.strip():
-        raise HTTPException(status_code=400, detail=f"Prospectus content is empty: {request.new_prospectus}")
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=json, timeout=10)
+            
+            if response.status_code != 200:
+                logging.info(f"Response status code: {response.status_code}, response content: {response.content}")
+            
+            res = response.json()
+            prospectuses = []
+            for key in res.keys():
+                prospectuses.append(f"{key}: {res[key]['content']}\n")
+                
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Request failed: {e}")
 
     # Build prompt using file contents
     prompt = (
-        "Mevcut ilaç prospektüsleri:\n" + "\n---\n".join(current_texts) + "\n"
-        "Yeni ilaç prospektusu:\n" + new_text + "\n"
+        "Ilaç prospektüsleri:\n" + "\n---\n".join(prospectuses) + "\n"
         "Bu ilaçlar arasında olası etkileşimler, yan etkiler veya çakışmalar var mı? "
         "Detaylı bir analiz yap."
     )
 
     # Generate analysis
     try:
-        analysis = generate_analyize_response(prompt)
+        analysis = generate_analyze_response(prompt)
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Ollama request failed: {e}")
 
